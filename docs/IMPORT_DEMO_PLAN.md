@@ -116,8 +116,8 @@ Never edit in place. Always: archive baseline → diff → insert. Whole-import 
 6. **Reimport + archive for changed** — minor edits + major header mismatch  
 7. **Thin demo UI** — walk flows without SQL; SQL views still available for the owner  
 
-### Suggested shape
-Small web app + real SQL (SQLite fine for demo; MySQL if closer feel). Fixture CSVs. Simple screens for the three flows. SQL views for import summary, latest run outcomes, archive.
+### Suggested shape (locked)
+Windows + Python + Laragon MySQL. FastAPI + Jinja2 + PyMySQL. See [EXECUTION_PHASE.md](EXECUTION_PHASE.md).
 
 ---
 

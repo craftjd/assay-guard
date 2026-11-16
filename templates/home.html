@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Assay import demo</title>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Assay import demo</h1>
+      <p>Python + Laragon MySQL. Plan lives in <code>docs/</code>.</p>
+
+      {% if db_name %}
+      <p class="ok">Connected to database: <strong>{{ db_name }}</strong></p>
+      {% else %}
+      <p class="err">Database not connected.</p>
+      <pre>{{ db_error }}</pre>
+      <p>Start Laragon MySQL, create the DB, copy <code>.env.example</code> to <code>.env</code>, run <code>sql/schema.sql</code>.</p>
+      {% endif %}
+
+      <p class="muted">Slices 2–7 not built yet.</p>
+    </main>
+  </body>
+</html>
