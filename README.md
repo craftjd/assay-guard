@@ -2,17 +2,30 @@
 
 **Safe lab CSV → MySQL imports** for geo/mining assay workflows: raw file evidence, processing runs, curated main, and an auditable archive. The UI is small on purpose; the rules below are what you would carry into production.
 
+**Read online (no install):** **[https://craftjd.github.io/assay-guard/](https://craftjd.github.io/assay-guard/)**
+
 ## Preview
 
 | Where | Open |
 |--------|------|
-| **This machine (Laragon / dev server)** | [http://127.0.0.1:8765](http://127.0.0.1:8765) |
-| **Docker** | `docker compose up --build` → same URL |
+| **GitHub Pages (this guide, in the browser)** | **[https://craftjd.github.io/assay-guard/](https://craftjd.github.io/assay-guard/)** |
+| **Run the app (local Laragon / dev)** | [http://127.0.0.1:8765](http://127.0.0.1:8765) |
+| **Docker** | `docker compose up --build` → [http://127.0.0.1:8765](http://127.0.0.1:8765) |
 | **GitHub Codespaces** | **Code → Create codespace on main**, then forward port **8765** |
 
 After the app is up, use **Samples** (top right) or **Start fresh** there to load fixture CSVs.
 
-Repository: [github.com/joel-duke/assay-guard](https://github.com/joel-duke/assay-guard) — set `GITHUB_REPO_URL` in `.env` if you use another fork.
+Source: [github.com/craftjd/assay-guard](https://github.com/craftjd/assay-guard) — set `GITHUB_REPO_URL` in `.env` if you use another fork.
+
+### GitHub repository (About box)
+
+Paste these into **Settings → General → About** on GitHub:
+
+| Field | Value |
+|--------|--------|
+| **Description** | Reference demo for safe lab CSV→MySQL imports—raw evidence, processing runs, curated main, and audit archive for assay / mining workflows. |
+| **Website** | https://craftjd.github.io/assay-guard/ |
+| **Topics** | `fastapi`, `mysql`, `csv`, `data-integrity`, `mining`, `assay`, `python`, `demo`, `import` |
 
 ---
 

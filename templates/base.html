@@ -10,14 +10,14 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
     />
-    <link rel="stylesheet" href="/static/app.css" />
+    <link rel="stylesheet" href="/static/app.css?v=3" />
   </head>
   <body>
     <header class="topbar">
       <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>{{ product_name }}</a>
       <nav class="topnav" aria-label="Sections">
-        {% for key, label in [("home", "Home"), ("import", "Import"), ("process", "Process"), ("main", "Main"), ("docs", "How it works")] %}
-        <a href="/{{ '' if key == 'home' else key }}" {% if nav == key %}class="active" aria-current="page"{% endif %}>{{ label }}</a>
+        {% for key, label in [("home", "Home"), ("import", "Import"), ("process", "Process"), ("main", "Main"), ("docs", "Guide")] %}
+        <a href="/{{ '' if key == 'home' else key }}" {% if nav == key %}class="active" aria-current="page"{% endif %}{% if key == "docs" %} title="How it works"{% endif %}>{{ label }}</a>
         {% endfor %}
       </nav>
       <div class="topbar-end">

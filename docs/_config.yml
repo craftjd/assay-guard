@@ -1,0 +1,6 @@
+title: Assay Guard
+description: Safe lab CSV → MySQL imports with review before main changes.
+url: https://craftjd.github.io
+baseurl: /assay-guard
+exclude:
+  - internal/

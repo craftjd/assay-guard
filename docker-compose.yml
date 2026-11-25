@@ -21,7 +21,7 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: ""
       MYSQL_DATABASE: assay_import
-      GITHUB_REPO_URL: https://github.com/joel-duke/assay-guard
+      GITHUB_REPO_URL: https://github.com/craftjd/assay-guard
     depends_on:
       db:
         condition: service_healthy
