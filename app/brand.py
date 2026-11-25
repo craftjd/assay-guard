@@ -1,2 +1,2 @@
 PRODUCT_NAME = "Assay Guard"
-PRODUCT_TAGLINE = "Safer lab CSV imports with review before main changes."
+PRODUCT_TAGLINE = "Review lab files before they change main—and keep a defensible trail when assay data shifts."

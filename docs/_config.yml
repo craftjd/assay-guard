@@ -1,5 +1,5 @@
 title: Assay Guard
-description: Safe lab CSV → MySQL imports with review before main changes.
+description: Reference demo for safe lab CSV imports—review before main changes, provenance, and whole-table checks for assay workflows.
 url: https://craftjd.github.io
 baseurl: /assay-guard
 exclude:

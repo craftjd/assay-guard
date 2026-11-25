@@ -1,9 +1,24 @@
-"""Structured copy for /docs (keep in sync with README «Data integrity»)."""
+"""Structured copy for /docs (keep in sync with README «Data integrity» and «Why this exists»)."""
 
 
 def doc_blocks() -> list[dict]:
     return [
-        {"type": "p", "text": "Assay Guard is a reference implementation of safe lab CSV imports. The UI is minimal; the rules below are what matter for production data."},
+        {
+            "type": "p",
+            "text": "We are not your geological authority. This page is the engineering side of the same promise as the README: lab files can land without silent overwrites on main, with a trail when values or rules shift.",
+        },
+        {"type": "h2", "text": "What geo teams ask for"},
+        {
+            "type": "table",
+            "headers": ["Worry", "How this demo responds"],
+            "rows": [
+                ["Trusted intervals changing with no record", "Main is never edited in place; archive then insert after you confirm"],
+                ["Which lab file is current after a reissue", "Raw bytes stored once; replace versions files; roll back is explicit"],
+                ["Accidental bulk write on a huge CSV", "Classify on Process first; main changes only on confirmed write"],
+                ["New detection / reject rules re-scoring old imports", "Config switch flags imports; preview or keep results—no hidden save"],
+                ["Overlap and bad intervals surfacing too late", "SQL checks on the full main table after updates"],
+            ],
+        },
         {"type": "h2", "text": "Three layers"},
         {
             "type": "table",
@@ -26,7 +41,7 @@ def doc_blocks() -> list[dict]:
                 ["Fails config", "Breaks loaded config", "Do not add; may remove after confirm"],
             ],
         },
-        {"type": "p", "text": "Config is a named file. CSV headers match by name, not column position."},
+        {"type": "p", "text": "Config is a named module. CSV headers match by name, not column position."},
         {"type": "h2", "text": "Two compares"},
         {
             "type": "ul",
@@ -47,7 +62,7 @@ def doc_blocks() -> list[dict]:
         },
         {"type": "h2", "text": "Global checks"},
         {"type": "p", "text": "SQL checks on Main run against the full curated table (overlap, required fields, numerics)."},
-        {"type": "h2", "text": "Out of scope here"},
+        {"type": "h2", "text": "Honest limits here"},
         {
             "type": "ul",
             "items": [
