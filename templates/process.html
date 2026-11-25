@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_ui.html" import state_tag, config_banner with context %}
+{% block title %}Process · {{ product_name }}{% endblock %}
+{% block body %}
+{{ config_banner() }}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Check files against main</span>
+    <h1>Process</h1>
+  </div>
+  <span class="hint"><kbd>↑</kbd><kbd>↓</kbd> move <kbd>Enter</kbd> open</span>
+</div>
+
+{% if groups %}
+{% for group in groups %}
+<h3 class="group-title">{{ group.title }} <span class="count">{{ group["items"]|length }}</span></h3>
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th class="name">File</th>
+        <th class="num">Rows</th>
+        <th>Status</th>
+        <th class="fill">Result</th>
+        <th>Latest</th>
+        <th class="tight"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in group["items"] %}
+      <tr data-href="/process/import/{{ item.import_id }}">
+        <td class="name key" title="{{ item.file_name }}"><a href="/process/import/{{ item.import_id }}">{{ item.plan.name.label }}</a></td>
+        <td class="num">{{ "{:,}".format(item.raw_count) }}</td>
+        <td>{{ state_tag(item.state, item.label) }}</td>
+        <td class="fill {% if item.state == 'failed' %}text-err{% elif item.state in ('matches', 'duplicate') %}dim{% endif %}" title="{{ item.result }}">{{ item.result or "—" }}</td>
+        <td class="mono dim" {% if item.run_no %}title="{{ item.when }}"{% endif %}>{% if item.run_no %}Run {{ item.run_no }}{% else %}—{% endif %}</td>
+        <td class="end">
+          <div class="btn-row">
+            {% if item.run_id %}
+            <button class="btn ghost small" type="button" data-dry="{{ item.import_id }}" aria-expanded="false">Preview</button>
+            {% endif %}
+            {% if item.config_state == "affected" %}
+            <form class="inline" method="post" action="/process/import/{{ item.import_id }}/keep-config">
+              <button class="btn ghost small" type="submit" title="Keep the results from {{ item.config_version }} for this import">Keep results</button>
+            </form>
+            {% endif %}
+            <form class="inline" method="post" action="/process/import/{{ item.import_id }}/reprocess">
+              {% if item.state != "not_run" %}<input type="hidden" name="back" value="/process" />{% endif %}
+              {% if item.state == "not_run" %}
+              <button class="btn small" type="submit" data-busy-label="Processing…">Process</button>
+              {% else %}
+              <button class="btn secondary small" type="submit" data-busy-label="Processing…">Process again</button>
+              {% endif %}
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endfor %}
+{% else %}
+<p class="empty">No files yet. Load one from <a href="/demo">Demo</a>.</p>
+{% endif %}
+{% endblock %}

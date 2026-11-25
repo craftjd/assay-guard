@@ -1,0 +1,9 @@
+<div class="toolbar">
+  <h2>Preview</h2>
+  <button class="btn ghost small" type="button" data-dry-close>Close</button>
+</div>
+{% if error %}
+<div class="flash err"><p>{{ error }}</p></div>
+{% elif plan %}
+{% include "dry_body.html" %}
+{% endif %}

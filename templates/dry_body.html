@@ -1,0 +1,22 @@
+{% from "_ui.html" import breakdown %}
+{% set c = plan.preview_changes %}
+<div class="preview">
+  {% if plan.status != "completed" %}
+  <p class="preview-head text-err">Processing again with {{ active_config() }} would fail: {{ plan.reason }}</p>
+  {% elif not c or not c.rows %}
+  <p class="preview-head">Processing again with {{ active_config() }} would change nothing.</p>
+  {% else %}
+  <p class="preview-head">Processing again with {{ active_config() }} would change {{ "{:,}".format(c.rows|length) }} row{{ "s" if c.rows|length != 1 else "" }}: {{ c.phrase }}.</p>
+  <p class="dim">After that, the rows would stand like this against main:</p>
+  {{ breakdown(plan.states, plan.row_total) }}
+  {% endif %}
+  <div class="btn-row">
+    {% if c and c.rows %}
+    <form class="inline" method="post" action="/process/import/{{ plan.import_id }}/reprocess">
+      {% if back %}<input type="hidden" name="back" value="{{ back }}" />{% endif %}
+      <button class="btn small" type="submit" data-busy-label="Processing…">Process again</button>
+    </form>
+    {% endif %}
+    <span class="muted">Preview only. Nothing was saved.</span>
+  </div>
+</div>

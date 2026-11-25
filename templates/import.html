@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tag %}
+{% block title %}Import · {{ product_name }}{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Stored files</span>
+    <h1>Import</h1>
+  </div>
+  <a class="btn secondary" href="/demo">Load a sample file</a>
+</div>
+
+{% macro version_row(item, sub=false, fold=none) %}
+<tr {% if sub %}class="sub" data-fold-of="{{ fold }}" hidden{% endif %} {% if not item.failed %}data-href="/process/import/{{ item.import_id }}"{% endif %}>
+  <td class="mono dim">{% if item.versions > 1 %}v{{ item.version }}{% endif %}</td>
+  <td class="fill {% if not sub %}key{% endif %}" title="{{ item.file_name }} · SHA-256 {{ item.fingerprint }}">{{ item.file_name }}</td>
+  <td class="num" {% if item.blank_rows %}title="{{ item.blank_rows }} blank line{{ 's' if item.blank_rows != 1 else '' }} skipped"{% endif %}>{{ "{:,}".format(item.raw_count) }}</td>
+  <td class="num {% if not item.main_count or sub %}dim{% endif %}" {% if item.main_note %}title="{{ item.main_note }}"{% endif %}>{{ "{:,}".format(item.main_count) }}</td>
+  <td class="num {% if not item.archive_count %}dim{% endif %}">{{ "{:,}".format(item.archive_count) }}</td>
+  <td class="mono dim">{{ item.when }}</td>
+  <td>{{ tag(item.status[0], item.status[1]) }}</td>
+  <td class="end">
+    <div class="btn-row">
+      {% if not sub and fold %}
+      <button class="btn ghost small" type="button" data-fold="{{ item.import_id }}" aria-expanded="false"><span data-fold-label="{{ fold }} earlier">{{ fold }} earlier</span></button>
+      {% endif %}
+      {% if item.can_change %}
+      <button class="btn ghost small" type="button" data-replace="{{ item.import_id }}" aria-expanded="false" title="Upload a corrected version of this file">Replace</button>
+      {% if item.can_roll_back %}
+      <form class="inline" method="post" action="/import/{{ item.import_id }}/roll-back">
+        <button class="btn ghost small" type="submit" data-arm="Click again to roll back" title="Undo this upload: version {{ item.roll_back_to }} becomes current again and main goes back to its values">Roll back to v{{ item.roll_back_to }}</button>
+      </form>
+      {% endif %}
+      {% if item.run_count %}
+      <form class="inline" method="post" action="/import/{{ item.import_id }}/void">
+        <button class="btn ghost small" type="submit" data-arm="Click again to void" title="Take this file's rows out of main and retire the import">Void</button>
+      </form>
+      {% endif %}
+      {% endif %}
+      {% if item.can_delete and not item.run_count %}
+      <form class="inline" method="post" action="/import/{{ item.import_id }}/delete">
+        <button class="btn ghost small" type="submit" data-arm="Click again to delete">Delete</button>
+      </form>
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% if item.can_change %}
+<tr class="expand" id="replace-{{ item.import_id }}" hidden>
+  <td colspan="8">
+    <form class="expand-body replace-form" method="post" action="/import/{{ item.import_id }}/replace" enctype="multipart/form-data">
+      <label class="field-label" for="file-{{ item.import_id }}">Replace {{ item.file_name }} with</label>
+      <div class="btn-row">
+        <input id="file-{{ item.import_id }}" class="file" type="file" name="file" accept=".csv,text/csv" required />
+        <button class="btn" type="submit" data-busy-label="Uploading…">Upload and replace</button>
+        <button class="btn ghost" type="button" data-replace="{{ item.import_id }}">Cancel</button>
+      </div>
+      <p class="muted">This version stays as a read-only earlier version. Its rows stay in main until you save the new file's changes on Process.</p>
+    </form>
+  </td>
+</tr>
+{% endif %}
+{% endmacro %}
+
+{% if groups %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th class="tight">Version</th>
+        <th class="fill">File</th>
+        <th class="num">Rows</th>
+        <th class="num">In main</th>
+        <th class="num">In archive</th>
+        <th>Loaded</th>
+        <th>Status</th>
+        <th class="tight"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for group in groups %}
+      {{ version_row(group.latest, false, group.earlier|length) }}
+      {% for item in group.earlier %}{{ version_row(item, true, group.latest.import_id) }}{% endfor %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="muted table-note">Replace keeps the old version for reference. Roll back undoes the latest upload and puts main back the way the earlier version left it. Void takes the file's rows out of main and keeps them in the archive. Delete is only offered before a file is processed.</p>
+{% else %}
+<p class="empty">No files yet. <a href="/demo">Load a sample file</a>.</p>
+{% endif %}
+{% endblock %}

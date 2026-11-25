@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}How it works · {{ product_name }}{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Reference</span>
+    <h1>How it works</h1>
+    <p class="lede">Practices this demo implements. The same text lives in {% if github_repo_url() %}<a href="{{ github_repo_url() }}#data-integrity-what-this-repo-proves">README</a> on GitHub{% else %}the repository README{% endif %}; use <a href="/demo">Samples</a> to try them in the UI.</p>
+  </div>
+</div>
+<article class="doc">
+{% for part in doc_blocks %}
+{% if part["type"] == "h2" %}<h2>{{ part["text"] }}</h2>
+{% elif part["type"] == "table" %}
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr>{% for cell in part["headers"] %}<th>{{ cell }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for row in part["rows"] %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% elif part["type"] == "ul" %}
+<ul class="lede-list">{% for item in part["items"] %}<li>{{ item }}</li>{% endfor %}</ul>
+{% elif part["type"] == "p" %}<p class="lede">{{ part["text"] }}</p>
+{% endif %}
+{% endfor %}
+</article>
+{% endblock %}

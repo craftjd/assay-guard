@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tag, pager, value_cells, written %}
+{% block title %}{{ item.file_name if item else "Process" }} · {{ product_name }}{% endblock %}
+{% block body %}
+{% if not item %}
+<p class="empty">Import not found. <a href="/process">Back to Process</a>.</p>
+{% else %}
+{% set plan = item.plan %}
+{% set base = "/process/import/" ~ item.import_id %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow"><a href="/process">Process</a>{% if plan.name.versions > 1 %} / Version {{ plan.name.version }} of {{ plan.name.versions }}{% endif %}</span>
+    <h1>{{ item.file_name }}</h1>
+    <div class="page-meta">
+      <span class="mono">{{ "{:,}".format(item.raw_count) }} rows</span>
+      {% if item.run_no %}<span class="mono">Run {{ item.run_no }}</span><span class="mono {% if not plan.config_match %}text-warn{% endif %}">{{ item.config_version }}</span><span class="mono dim">{{ item.when }}</span>{% endif %}
+    </div>
+  </div>
+  {% if not plan.archived %}
+  <div class="btn-row">
+    {% if item.run_id %}
+    <button class="btn ghost" type="button" data-dry-panel="{{ item.import_id }}" aria-expanded="false" aria-controls="dry-panel" title="See what processing again with {{ active_config() }} would change. Nothing is saved.">Preview</button>
+    {% endif %}
+    <form class="inline" method="post" action="{{ base }}/reprocess">
+      <button class="btn{% if item.run_id %} secondary{% endif %}" type="submit" data-busy-label="Processing…">{{ "Process again" if item.run_id else "Process" }}</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+<div id="dry-panel" class="dry-panel" hidden></div>
+
+{% with writes=True %}{% include "plan_body.html" %}{% endwith %}
+
+{% if item.rows %}
+{% set rows = item.rows %}
+{% set show = "show=" ~ item.filter ~ "&" if item.filter else "" %}
+{% set find = "q=" ~ (item.query|urlencode) ~ "&" if item.query else "" %}
+<section class="section" id="rows">
+  <div class="toolbar">
+    <h2>Rows{% if item.filter %} · {{ plan.states|selectattr("code", "equalto", item.filter)|map(attribute="label")|first }}{% endif %}</h2>
+    {% if item.filter or item.query %}<a class="btn ghost small" href="{{ base }}#rows">Show all</a>{% endif %}
+    <form class="inline search-form" method="get" action="{{ base }}#rows" role="search">
+      {% if item.filter %}<input type="hidden" name="show" value="{{ item.filter }}" />{% endif %}
+      <span class="hint"><kbd>/</kbd> search</span>
+      <input class="search" type="search" name="q" value="{{ item.query }}" placeholder="Sample, hole, status, file row…" data-focus-search data-live-search aria-label="Search rows" />
+    </form>
+  </div>
+  {% if rows.rows %}
+  <div class="table-wrap">
+    <table class="table rows-table scroll" id="outcomes">
+      <thead>
+        <tr>
+          <th class="num tight" title="Line number in the CSV">Line</th>
+          <th class="sample">Sample</th>
+          {% for column in plan.columns %}<th class="{% if column.num %}num {% endif %}val">{{ column.label }}</th>{% endfor %}
+          <th>Status</th>
+          <th class="fill">Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows.rows %}
+        <tr>
+          <td class="num dim">{{ row.source_row_no }}</td>
+          <td class="sample key">{{ row.row_key or "—" }}</td>
+          {{ value_cells(plan.columns, row["values"], row.fields) }}
+          <td>{{ tag(row.tone, row.label) }}</td>
+          <td class="fill {% if row.state in ('remove', 'rejected') %}text-err{% else %}dim{% endif %}">{{ row.note }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><td class="dim" colspan="{{ plan.columns|length + 4 }}">{{ rows.start }}–{{ rows.end }} of {{ "{:,}".format(rows.total) }}{% if item.filter or item.query %} matching{% endif %}</td></tr>
+      </tfoot>
+    </table>
+  </div>
+  {{ pager(rows.page, rows.pages, base ~ "?" ~ show ~ find ~ "page=", "#rows") }}
+  {% else %}
+  <p class="empty">No rows match. <a href="{{ base }}#rows">Show all rows</a>.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if plan.history %}
+<section class="section" id="runs">
+  <div class="toolbar"><h2>Runs</h2></div>
+  <p class="lede">A run is stored only when a row gets a different result. Open one to see its rows as they were.</p>
+  <div class="table-wrap">
+    <table class="table scroll">
+      <thead>
+        <tr>
+          <th class="tight">Run</th>
+          <th>When</th>
+          <th>Config</th>
+          <th>Found</th>
+          <th>Changed from the run before</th>
+          <th class="fill">Saved to main</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in plan.history %}
+        <tr data-href="{{ base }}/runs/{{ run.run_no }}">
+          <td class="mono"><a href="{{ base }}/runs/{{ run.run_no }}">{{ run.run_no }}</a>{% if run.latest %} {{ tag("dim", "Latest") }}{% endif %}</td>
+          <td class="mono dim">{{ run.when }}</td>
+          <td class="mono">{{ run.config_version }}</td>
+          <td title="{{ run.found }}">{{ run.found }}</td>
+          <td class="dim" title="{{ run.changes }}">{{ run.changes }}</td>
+          <td class="fill lines">{{ written(run.written) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

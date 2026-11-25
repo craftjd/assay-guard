@@ -1,25 +1,63 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Assay import demo</title>
-    <link rel="stylesheet" href="/static/app.css" />
-  </head>
-  <body>
-    <main>
-      <h1>Assay import demo</h1>
-      <p>Python + Laragon MySQL. Plan lives in <code>docs/</code>.</p>
+{% extends "base.html" %}
+{% block title %}Home · {{ product_name }}{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Overview</span>
+    <h1>{{ product_name }}</h1>
+    <p class="lede">{{ product_tagline }}</p>
+  </div>
+  <a class="btn secondary" href="/docs">How it works</a>
+</div>
 
-      {% if db_name %}
-      <p class="ok">Connected to database: <strong>{{ db_name }}</strong></p>
-      {% else %}
-      <p class="err">Database not connected.</p>
-      <pre>{{ db_error }}</pre>
-      <p>Start Laragon MySQL, create the DB, copy <code>.env.example</code> to <code>.env</code>, run <code>sql/schema.sql</code>.</p>
-      {% endif %}
+<section class="chips" aria-label="Current state">
+  <div class="chip">
+    <span class="chip-label">Stored files</span>
+    <span class="chip-value mono">{{ "{:,}".format(stats.files) }}</span>
+  </div>
+  <div class="chip">
+    <span class="chip-label">Rows in main</span>
+    <span class="chip-value mono">{{ "{:,}".format(stats.main_rows) }}</span>
+  </div>
+  <div class="chip">
+    <span class="chip-label">Rejections (latest runs)</span>
+    <span class="chip-value mono{% if stats.rejections %} text-err{% endif %}">{{ "{:,}".format(stats.rejections) }}</span>
+  </div>
+  <div class="chip">
+    <span class="chip-label">Ready to save</span>
+    <span class="chip-value mono{% if stats.pending_review %} text-warn{% endif %}">{{ "{:,}".format(stats.pending_review) }}</span>
+  </div>
+  <div class="chip">
+    <span class="chip-label">Config</span>
+    <span class="chip-value mono">{{ stats.config_version }}</span>
+  </div>
+</section>
 
-      <p class="muted">Slices 2–7 not built yet.</p>
-    </main>
-  </body>
-</html>
+{% if stats.config_affected %}
+<p class="notice">Config check: {{ stats.config_affected }} import{{ "" if stats.config_affected == 1 else "s" }} would get different results on <a href="/process">Process</a>.</p>
+{% endif %}
+
+<section class="section">
+  <div class="toolbar"><h2>What this demo proves</h2></div>
+  <ul class="lede-list">
+    <li>Same lab file is not stored twice; batches commit only when the load finishes.</li>
+    <li>Processing can be rerun; main changes only after you confirm each write list.</li>
+    <li>Updates archive the old payload; main is never edited in place.</li>
+    <li>Config changes flag imports; preview shows what reprocessing would do.</li>
+  </ul>
+</section>
+
+<section class="section">
+  <div class="toolbar"><h2>Where to go</h2></div>
+  <div class="home-links">
+    <a class="home-card" href="/import"><span class="home-card-title">Import</span><span class="muted">Stored files, replace, void, roll back</span></a>
+    <a class="home-card" href="/process"><span class="home-card-title">Process</span><span class="muted">Classify rows, confirm saves</span></a>
+    <a class="home-card" href="/main"><span class="home-card-title">Main</span><span class="muted">Curated assays and SQL checks</span></a>
+    <a class="home-card" href="/demo"><span class="home-card-title">Sample data</span><span class="muted">Load fixtures for a walkthrough</span></a>
+  </div>
+</section>
+
+{% if github_repo_url() %}
+<p class="table-note muted">Hosted copy: <a href="{{ github_repo_url() }}">{{ github_repo_url() }}</a> — use Codespaces for a browser demo without local install.</p>
+{% endif %}
+{% endblock %}

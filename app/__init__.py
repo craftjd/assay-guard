@@ -1,1 +1,1 @@
-# Assay import demo application package.
+# Assay Guard application package.

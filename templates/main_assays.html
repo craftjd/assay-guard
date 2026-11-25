@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tag, pager %}
+{% block title %}Main · {{ product_name }}{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Insert only</span>
+    <h1>Main assays</h1>
+  </div>
+</div>
+
+{% set failed = checks|rejectattr("passed")|list %}
+{% set has_rows = table and table.total %}
+{% set names = import_names() %}
+<nav class="tabs" aria-label="Main views">
+  <a class="tab" href="/main" {% if view == "rows" %}aria-selected="true"{% endif %}>
+    Rows <span class="count">{{ "{:,}".format(table.total) if table else 0 }}</span>
+  </a>
+  <a class="tab" href="/main?view=checks" {% if view == "checks" %}aria-selected="true"{% endif %}>
+    SQL checks
+    {% if view == "checks" and has_rows %}
+    {% if failed %}<span class="count text-err">{{ failed|length }} failing</span>{% else %}<span class="count text-ok">pass</span>{% endif %}
+    {% endif %}
+  </a>
+  {% if has_rows and view == "rows" %}
+  <div class="tabs-end">
+    <span class="hint"><kbd>/</kbd> filter this page</span>
+    <input class="search" type="search" placeholder="Sample, hole?" data-search="#assays" aria-label="Filter this page" />
+  </div>
+  {% endif %}
+</nav>
+
+{% if view == "rows" %}
+<section id="panel-rows">
+  {% if has_rows %}
+  <div class="table-wrap">
+    <table class="table" id="assays">
+      <thead>
+        <tr>
+          {% for key, label, kind in table.columns %}
+          {% set next_dir = "desc" if table.sort == key and table.direction == "asc" else "asc" %}
+          <th class="{{ 'num' if kind == 'num' else '' }}{{ ' fill' if key == 'loaded' else '' }}">
+            <a href="/main?sort={{ key }}&dir={{ next_dir }}&page=1" {% if table.sort == key %}aria-sort="{{ 'ascending' if table.direction == 'asc' else 'descending' }}"{% endif %}>{{ label }}<span class="dir">{% if table.sort == key %}{{ "↑" if table.direction == "asc" else "↓" }}{% endif %}</span></a>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in table.rows %}
+        <tr>
+          {% for key, label, kind in table.columns %}
+          {% if key == "import" %}
+          <td class="name" title="{{ names[row.import_id].title }}"><a href="/process/import/{{ row.import_id }}">{{ names[row.import_id].label }}</a></td>
+          {% else %}
+          <td class="{{ kind }}{{ ' fill dim' if key == 'loaded' else '' }}{{ ' dim' if kind == 'num' and not row[key] else '' }}">{{ row[key] or "—" }}</td>
+          {% endif %}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td class="key">Total</td>
+          <td class="mono" colspan="{{ table.columns|length - 1 }}">{{ "{:,}".format(table.total) }} row{{ "" if table.total == 1 else "s" }} in main<span class="sep"> · </span><span class="dim">{{ table.start }}–{{ table.end }} on this page</span></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {{ pager(table.page, table.pages, "/main?sort=" ~ table.sort ~ "&dir=" ~ table.direction ~ "&page=") }}
+  {% else %}
+  <p class="empty">Main is empty. Rows arrive only through a confirmed write on an import.</p>
+  {% endif %}
+</section>
+
+{% else %}
+<section id="panel-checks">
+  {% if has_rows %}
+  <p class="lede">Each check is a SQL query run on every row in main, built from the active config. Point at a check to see its query.</p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Result</th>
+          <th>Check</th>
+          <th>Detail</th>
+          <th class="fill">Rule</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for check in checks %}
+        <tr tabindex="0" data-sql="{{ check.sql }}" data-sql-name="{{ check.name }}" {% if not check.passed %}data-failing{% endif %}>
+          <td>{{ tag("ok", "Pass") if check.passed else tag("err", "Fail") }}</td>
+          <td class="strong" title="{{ check.name }}">{{ check.name }}</td>
+          <td class="{% if check.passed %}dim{% else %}text-err{% endif %}">{% if check.passed %}{{ check.detail }}{% else %}<a class="text-err" href="#check-{{ loop.index }}" data-scroll>{{ check.detail }} ↓</a>{% endif %}</td>
+          <td class="fill dim" title="{{ check.rule }}">{{ check.rule }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="sql-panel">
+    <div class="sql-head"><span class="eyebrow">SQL</span> <span class="strong" data-sql-title></span></div>
+    <pre data-sql-view></pre>
+  </div>
+  {% for check in checks if not check.passed %}
+  <section class="section" id="check-{{ checks.index(check) + 1 }}">
+    <div class="toolbar"><h2>{{ check.name }}</h2></div>
+    <p class="lede">{{ check.rule }} Each row shows the import and file row the main value was read from. Failing values are marked.</p>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="sample">Sample</th>
+            <th>File</th>
+            <th class="num tight">File row</th>
+            {% for column in check.columns %}<th class="{% if column.num %}num {% endif %}val">{{ column.name }}</th>{% endfor %}
+            <th class="fill">Why</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for failure in check.failures %}
+          <tr>
+            <td class="sample key">{{ failure.row_key or "—" }}</td>
+            <td class="name" title="{{ names[failure.import_id].title }}"><a href="/process/import/{{ failure.import_id }}">{{ names[failure.import_id].label }}</a></td>
+            <td class="num">{% if failure.source_row_no %}<a href="/process/import/{{ failure.import_id }}?q={{ failure.source_row_no }}#rows">{{ failure.source_row_no }}</a>{% else %}—{% endif %}</td>
+            {% for value in failure["values"] %}
+            <td class="mono {% if value.num %}num {% endif %}val{% if value.bad %} bad{% endif %}">{{ value.value if value.value != "" else ("blank" if value.bad else "—") }}</td>
+            {% endfor %}
+            <td class="fill text-err" title="{{ failure.reason }}">{{ failure.reason }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if check.failure_count > check.failures|length %}<div class="section-actions"><span class="muted">Showing {{ check.failures|length }} of {{ check.failure_count }}.</span></div>{% endif %}
+  </section>
+  {% endfor %}
+  {% else %}
+  <p class="empty">No rows to check.</p>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

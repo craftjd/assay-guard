@@ -1,0 +1,105 @@
+{% macro tag(tone, text) -%}
+<span class="tag {{ tone }}">{{ text }}</span>
+{%- endmacro %}
+
+{% macro state_tag(state, label) -%}
+{{ tag({"matches": "ok", "review": "act", "rerun": "warn", "config": "warn", "failed": "err", "duplicate": "dim", "archived": "dim", "not_run": "idle"}.get(state, "dim"), label) }}
+{%- endmacro %}
+
+{% macro outcome_tag(outcome) -%}
+{{ tag({"good": "act", "already_same": "ok-soft", "changed": "warn", "invalid": "err"}.get(outcome, "dim"), {"good": "New", "already_same": "Same as main", "changed": "Different", "invalid": "Fails config"}.get(outcome, outcome)) }}
+{%- endmacro %}
+
+{% macro plural(count, noun) -%}
+{{ "{:,}".format(count) }} {{ noun }}{{ "" if count == 1 else "s" }}
+{%- endmacro %}
+
+{# Stacked bar of where every row of the file stands, with a legend that filters the rows. #}
+{% macro breakdown(states, total, href=none, current="") %}
+<div class="breakdown">
+  <div class="bar" role="img" aria-label="Rows by status">
+    {% for state in states if state.count %}
+    <span class="seg {{ state.tone }}" style="flex-grow: {{ state.count }}" title="{{ state.label }}: {{ '{:,}'.format(state.count) }}"></span>
+    {% endfor %}
+  </div>
+  <ul class="legend">
+    {% for state in states if state.count %}
+    <li>
+      {% if href %}<a href="{{ href }}{{ '' if current == state.code else state.code }}#rows" {% if current == state.code %}aria-current="true"{% endif %}>{% endif %}
+      <span class="swatch {{ state.tone }}"></span><span class="num">{{ "{:,}".format(state.count) }}</span> {{ state.label }}
+      {% if href %}</a>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endmacro %}
+
+{% macro write_form(plan, writes, action, digest, label, armed, note) %}
+<div class="section-actions">
+  {% if writes and plan.can_write %}
+  <form class="inline" method="post" action="/process/import/{{ plan.import_id }}/{{ action }}">
+    <input type="hidden" name="run_id" value="{{ plan.run_id }}" />
+    <input type="hidden" name="digest" value="{{ digest }}" />
+    <button class="btn{% if armed %} danger{% endif %}" type="submit" data-busy-label="Saving…" {% if armed %}data-arm="Click again to confirm"{% endif %}>{{ label }}</button>
+  </form>
+  {% if caller is defined %}{{ caller() }}{% endif %}
+  <span class="muted">{{ note }}</span>
+  {% elif writes %}
+  <span class="muted">Can't save yet. {{ plan.verdict.title }}.</span>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# Stop proposing a change without touching main. Without a key, dismisses the whole list. #}
+{% macro dismiss_button(plan, kind, key=none, label="Dismiss") -%}
+<form class="inline" method="post" action="/process/import/{{ plan.import_id }}/dismiss">
+  <input type="hidden" name="kind" value="{{ kind }}" />
+  {% if key %}<input type="hidden" name="key" value="{{ key }}" />{% endif %}
+  <button class="btn ghost{% if key %} small{% endif %}" type="submit" data-arm="Click again to dismiss" title="Don't save {{ 'this change' if key else 'these changes' }}. Main stays as it is, and you can restore it later.">{{ label }}</button>
+</form>
+{%- endmacro %}
+
+{% macro pager(page, pages, href, anchor="") %}
+{% if pages > 1 %}
+<nav class="pager" aria-label="Pages">
+  <span class="range">Page {{ page }} of {{ pages }}</span>
+  {% if page > 1 %}<a href="{{ href }}{{ page - 1 }}{{ anchor }}" aria-label="Previous page">←</a>{% else %}<span class="page-no off">←</span>{% endif %}
+  {% set ns = namespace(gap=false) %}
+  {% for number in range(1, pages + 1) %}
+  {% if number == 1 or number == pages or (number - page)|abs <= 2 %}
+  {% set ns.gap = false %}
+  {% if number == page %}<span class="page-no current" aria-current="page">{{ number }}</span>{% else %}<a href="{{ href }}{{ number }}{{ anchor }}">{{ number }}</a>{% endif %}
+  {% elif not ns.gap %}
+  {% set ns.gap = true %}<span class="page-no off">…</span>
+  {% endif %}
+  {% endfor %}
+  {% if page < pages %}<a href="{{ href }}{{ page + 1 }}{{ anchor }}" aria-label="Next page">→</a>{% else %}<span class="page-no off">→</span>{% endif %}
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro source(row) -%}
+{% if row.main_import_id is none %}<span class="dim">—</span>{% else %}<a href="/process/import/{{ row.main_import_id }}" title="{{ row.main_title }}">{{ row.main_label }}</a>{% endif %}
+{%- endmacro %}
+
+{# Row values in config order, failing ones marked. #}
+{% macro value_cells(columns, values, fields) -%}
+{% for column in columns %}<td class="mono {% if column.num %}num {% endif %}val{% if column.name in fields %} bad{% endif %}">{{ values[column.name] or "—" }}</td>{% endfor %}
+{%- endmacro %}
+
+{# What a run saved to main: one line per kind of write, with the rows it touched. #}
+{% macro written(parts, empty="—") -%}
+{% for part in parts %}<div class="written"><span class="strong">{{ part.label }} {{ part.rows }}</span> <span class="dim">{{ part.brief }}</span></div>{% else %}<span class="dim">{{ empty }}</span>{% endfor %}
+{%- endmacro %}
+
+{% macro config_banner() %}
+{% set affected = config_affected() %}
+{% if affected %}
+<div class="flash warn" role="status">
+  <p><strong>{{ active_config() }}</strong> gives different results for {{ affected }} import{{ "s" if affected != 1 else "" }}. {% if nav == "process" %}Process again to use it, or keep the old results with <em>Keep results</em> below.{% else %}<a href="/process">Review on Process</a>.{% endif %}</p>
+  <form class="inline" method="post" action="/config/reprocess">
+    <button class="btn small" type="submit" data-busy-label="Processing…">Process {{ affected }} again</button>
+  </form>
+</div>
+{% endif %}
+{% endmacro %}

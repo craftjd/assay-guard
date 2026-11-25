@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% from "_ui.html" import config_banner with context %}
+{% block title %}{{ config.version }} · {{ product_name }}{% endblock %}
+{% block body %}
+{{ config_banner() }}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Loaded config</span>
+    <h1 class="mono">{{ config.version }}</h1>
+  </div>
+</div>
+
+{% if stage == "confirm" and chosen %}
+<section class="confirm">
+  <h2>Load {{ chosen.source }}?</h2>
+  <p>{{ chosen.change }} Every processed import is tested against it right away. Only imports whose results would change are flagged on Process, where you can process them again or keep their current results.</p>
+  <div class="btn-row">
+    <form class="inline" method="post" action="/config/apply">
+      <input type="hidden" name="module" value="{{ chosen.module }}" />
+      <button class="btn" type="submit" data-busy-label="Loading…">Load this config</button>
+    </form>
+    <a class="btn ghost" href="/config">Cancel</a>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="toolbar"><h2>Rules</h2></div>
+  <div class="table-wrap">
+    <table class="table spec">
+      <tbody>
+        {% for label, value, code in [
+          ("System", config.system, false),
+          ("Dataset", config.dataset, false),
+          ("Key", config.key, true),
+          ("Hole", config.hole, true),
+          ("From", config.interval_from, true),
+          ("To", config.interval_to, true),
+          ("Interval types", config.interval_types, false),
+          ("No interval", config.qaqc_types, false),
+          ("Not in overlap check", config.duplicate_types, false),
+          ("Analytes", config.analyte_rule, false),
+          ("Header match", config.header_match, false),
+        ] %}
+        <tr>
+          <td>{{ label }}</td>
+          <td class="fill {% if code %}mono{% endif %}" title="{{ value }}">{{ value }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section">
+  <div class="toolbar"><h2>Elements <span class="count">{{ config.elements|length }}</span></h2></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="tight">Symbol</th>
+          <th>Name</th>
+          <th>Header</th>
+          <th class="fill">Unit</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for element in config.elements %}
+        <tr>
+          <td class="key">{{ element.symbol }}</td>
+          <td>{{ element.name }}</td>
+          <td class="mono">{{ element.header }}</td>
+          <td class="fill mono dim">{{ element.unit }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if choices %}
+<section class="section">
+  <div class="toolbar"><h2>Other configs</h2></div>
+  <div class="tiles">
+    {% for choice in choices %}
+    <form method="post" action="/config/ask">
+      <input type="hidden" name="module" value="{{ choice.module }}" />
+      <button class="tile" type="submit">
+        <span class="tile-index">Load instead</span>
+        <span class="tile-title mono">{{ choice.version }}</span>
+        <span class="tile-text">{{ choice.change }}</span>
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

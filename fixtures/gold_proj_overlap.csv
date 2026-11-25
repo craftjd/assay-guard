@@ -1,0 +1,2 @@
+SampleID,HoleID,ProjectCode,SampFrom,SampTo,SampleType,DespatchNo,LabJobNo,Au_ppm,Cu_pct,Ag_ppm,As_ppm
+ACQ00301,DDH-26-001,GOLD_PROJ,5.0,6.5,CORE,DSP-2026-043,ALS260950,0.88,0.41,3.2,75.0

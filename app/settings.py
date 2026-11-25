@@ -7,6 +7,11 @@ ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
 
 
+def github_repo_url() -> str | None:
+    url = (os.getenv("GITHUB_REPO_URL") or "").strip()
+    return url or None
+
+
 def mysql_config() -> dict:
     return {
         "host": os.getenv("MYSQL_HOST", "127.0.0.1"),

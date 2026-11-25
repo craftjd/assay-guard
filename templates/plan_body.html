@@ -1,0 +1,220 @@
+{% from "_ui.html" import tag, plural, source, write_form, breakdown, dismiss_button %}
+{% set can_dismiss = writes and plan.can_write %}
+{% set v = plan.verdict %}
+<section class="verdict {{ v.tone }}" aria-live="polite">
+  <div class="verdict-text">
+    <h2>{{ v.title }}</h2>
+    {% if v.detail %}<p>{{ v.detail }}</p>{% endif %}
+    {% if plan.replaces %}
+    <div class="replaces">
+      <span class="dim">Replaces <a href="/process/import/{{ plan.replaces.import_id }}">version {{ plan.replaces.version }} ({{ plan.replaces.file_name }})</a>.</span>
+      {% if writes and plan.replaces.can_roll_back %}
+      <form class="inline" method="post" action="/import/{{ plan.import_id }}/roll-back">
+        <button class="btn ghost small" type="submit" data-arm="Click again to roll back" title="Undo this upload: version {{ plan.replaces.version }} becomes current again and main goes back to its values">Roll back to version {{ plan.replaces.version }}</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% if writes and plan.config.state == "affected" and not plan.archived %}
+  <div class="btn-row">
+    <form class="inline" method="post" action="/process/import/{{ plan.import_id }}/reprocess">
+      <button class="btn" type="submit" data-busy-label="Processing…">Process with {{ active_config() }}</button>
+    </form>
+    <form class="inline" method="post" action="/process/import/{{ plan.import_id }}/keep-config">
+      <input type="hidden" name="back" value="/process/import/{{ plan.import_id }}" />
+      <button class="btn ghost" type="submit">Keep {{ plan.config_version }} results</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+
+{% if plan.status == "completed" %}
+{{ breakdown(plan.states, plan.row_total, "/process/import/" ~ plan.import_id ~ "?show=", item.filter if item else "") }}
+
+{% if plan.version and (plan.version.changed or plan.version.added or plan.version.removed) %}
+<section class="section">
+  <div class="toolbar"><h2>What changed from version {{ plan.version.version }}</h2></div>
+  <p class="lede">
+    {% set parts = [] %}
+    {% if plan.version.changed %}{% set _ = parts.append(plural(plan.version.changed, "row") ~ " with new values") %}{% endif %}
+    {% if plan.version.added %}{% set _ = parts.append(plural(plan.version.added, "row") ~ " added") %}{% endif %}
+    {% if plan.version.removed %}{% set _ = parts.append(plural(plan.version.removed, "row") ~ " dropped") %}{% endif %}
+    {{ parts|join(", ") }} compared with {{ plan.version.file_name }}.
+  </p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="sample">Sample</th><th class="field">Column</th><th class="num val">Was</th><th class="arrow"></th><th class="num val">Now</th><th class="fill"></th></tr></thead>
+      <tbody>
+        {% for row in plan.version.rows[:40] %}
+        {% if row.kind == "values" %}
+        {% for change in row.changes %}
+        <tr>
+          <td class="sample key">{% if loop.first %}{{ row.row_key }}{% endif %}</td>
+          <td class="field mono dim">{{ change.field }}</td>
+          <td class="num val from">{{ change.before or "blank" }}</td>
+          <td class="arrow">→</td>
+          <td class="num val to">{{ change.after or "blank" }}</td>
+          <td class="fill"></td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td class="sample key">{{ row.row_key }}</td>
+          <td class="field dim" colspan="4">{{ "Added in this file" if row.kind == "added" else "Not in this file" }}</td>
+          <td class="fill"></td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if plan.conflicts %}
+<section class="section">
+  <div class="toolbar"><h2>Rows to check again</h2></div>
+  <p class="lede">Main changed after run {{ plan.run_no }}. Process again to compare these {{ plural(plan.conflicts|length, "row") }} with main as it is now.</p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="sample">Sample</th><th class="fill">What changed</th></tr></thead>
+      <tbody>
+        {% for row in plan.conflicts[:40] %}
+        <tr><td class="sample key">{{ row.row_key }}</td><td class="fill dim">{{ row.note }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if plan.adds %}
+<section class="section">
+  <div class="toolbar"><h2>Add new rows</h2></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Hole</th><th class="num">Samples</th><th class="fill">Sample IDs</th><th class="num">From m</th><th class="num">To m</th><th>Types</th></tr></thead>
+      <tbody>
+        {% for group in plan.add_groups %}
+        <tr>
+          <td class="key {% if not group.has_hole %}dim{% endif %}">{{ group.label }}</td>
+          <td class="num">{{ "{:,}".format(group.count) }}</td>
+          <td class="fill mono">{{ group.first }}{% if group.count > 1 %} <span class="dim">to</span> {{ group.last }}{% endif %}</td>
+          <td class="num">{{ group.start or "—" }}</td>
+          <td class="num">{{ group.end or "—" }}</td>
+          <td class="mono dim">{{ group.types or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% call write_form(plan, writes, "save", plan.add_digest, "Add " ~ plural(plan.adds|length, "row") ~ " to main", false, "Nothing already in main changes.") %}{% endcall %}
+</section>
+{% endif %}
+
+{% if plan.replacements %}
+<section class="section">
+  <div class="toolbar"><h2>Update rows</h2></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="sample">Sample</th><th class="field">Column</th><th class="num val">In main</th><th class="arrow"></th><th class="num val">This file</th><th class="fill">Saved by</th><th class="tight"></th></tr></thead>
+      <tbody>
+        {% for row in plan.replacements[:40] %}
+        {% for change in row.changes %}
+        <tr>
+          <td class="sample key">{% if loop.first %}{{ row.row_key }}{% endif %}</td>
+          <td class="field mono dim">{{ change.field }}</td>
+          <td class="num val from">{{ change.main or "blank" }}</td>
+          <td class="arrow">→</td>
+          <td class="num val to">{{ change.file or "blank" }}</td>
+          <td class="fill mono">{% if loop.first %}{{ source(row) }}{% endif %}</td>
+          <td class="end">{% if loop.first %}<div class="btn-row"><button class="btn ghost small" type="button" data-key="{{ row.row_key }}" data-payload-main="{{ row.before }}" data-payload-file="{{ row.after }}">Compare</button>{% if can_dismiss %}{{ dismiss_button(plan, "update", row.row_key) }}{% endif %}</div>{% endif %}</td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% call write_form(plan, writes, "replace", plan.replace_digest, "Update " ~ plural(plan.replacements|length, "row"), true, "The value in main now is kept in the archive.") %}{% if plan.replacements|length > 1 %}{{ dismiss_button(plan, "update", none, "Dismiss all") }}{% endif %}{% endcall %}
+</section>
+{% endif %}
+
+{% if plan.set_asides %}
+<section class="section">
+  <div class="toolbar"><h2>Remove rows that fail the config</h2></div>
+  <p class="lede">These rows are in main, but fail {{ plan.config_version }}.</p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="sample">Sample</th><th class="fill">Why</th><th>Saved by</th><th class="tight"></th></tr></thead>
+      <tbody>
+        {% for row in plan.set_asides[:40] %}
+        <tr>
+          <td class="sample key">{{ row.row_key }}</td>
+          <td class="fill text-err" title="{{ row.reason }}">{{ row.reason }}</td>
+          <td class="mono">{{ source(row) }}</td>
+          <td class="end"><div class="btn-row"><button class="btn ghost small" type="button" data-key="{{ row.row_key }}" data-payload-main="{{ row.before }}" data-fail-fields="{{ row.fields|tojson_attr }}">View</button>{% if can_dismiss %}{{ dismiss_button(plan, "remove", row.row_key) }}{% endif %}</div></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% call write_form(plan, writes, "set-aside", plan.set_aside_digest, "Remove " ~ plural(plan.set_asides|length, "row"), true, "Removed rows are kept in the archive.") %}{% if plan.set_asides|length > 1 %}{{ dismiss_button(plan, "remove", none, "Dismiss all") }}{% endif %}{% endcall %}
+</section>
+{% endif %}
+
+{% if plan.absent %}
+<section class="section">
+  <div class="toolbar"><h2>Remove rows missing from this file</h2></div>
+  <p class="lede">An earlier file in this group put these rows in main. This file doesn't have them.</p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="fill">Sample</th><th>Saved by</th><th class="tight"></th></tr></thead>
+      <tbody>
+        {% for row in plan.absent[:40] %}
+        <tr>
+          <td class="fill key">{{ row.row_key }}</td>
+          <td class="mono">{{ source(row) }}</td>
+          <td class="end"><div class="btn-row"><button class="btn ghost small" type="button" data-key="{{ row.row_key }}" data-payload-main="{{ row.before }}">View</button>{% if can_dismiss %}{{ dismiss_button(plan, "absent", row.row_key) }}{% endif %}</div></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% call write_form(plan, writes, "absent", plan.absent_digest, "Remove " ~ plural(plan.absent|length, "row"), true, "Removed rows are kept in the archive.") %}{% if plan.absent|length > 1 %}{{ dismiss_button(plan, "absent", none, "Dismiss all") }}{% endif %}{% endcall %}
+</section>
+{% endif %}
+
+{% if plan.dismissed %}
+<section class="section">
+  <div class="toolbar"><h2>Dismissed changes</h2></div>
+  <p class="lede">These were proposed and dismissed, so main was left as it is. If the file or main changes, they are proposed again.</p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="sample">Sample</th><th class="fill">Result</th><th>Dismissed</th><th class="tight"></th></tr></thead>
+      <tbody>
+        {% for row in plan.dismissed[:40] %}
+        <tr>
+          <td class="sample key">{{ row.row_key }}</td>
+          <td class="fill dim">{{ row.what }}</td>
+          <td class="mono dim">{{ row.when }}</td>
+          <td class="end">{% if writes and not plan.archived %}
+            <form class="inline" method="post" action="/process/import/{{ plan.import_id }}/restore">
+              <input type="hidden" name="key" value="{{ row.row_key }}" />
+              <button class="btn ghost small" type="submit">Restore</button>
+            </form>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if writes and not plan.archived and plan.dismissed|length > 1 %}
+  <div class="section-actions">
+    <form class="inline" method="post" action="/process/import/{{ plan.import_id }}/restore">
+      <button class="btn ghost" type="submit">Restore all {{ plan.dismissed|length }}</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endif %}

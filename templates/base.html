@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ product_name }}{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    />
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>{{ product_name }}</a>
+      <nav class="topnav" aria-label="Sections">
+        {% for key, label in [("home", "Home"), ("import", "Import"), ("process", "Process"), ("main", "Main"), ("docs", "How it works")] %}
+        <a href="/{{ '' if key == 'home' else key }}" {% if nav == key %}class="active" aria-current="page"{% endif %}>{{ label }}</a>
+        {% endfor %}
+      </nav>
+      <div class="topbar-end">
+        <a class="config-link{% if nav == 'config' %} active{% endif %}" href="/config" title="Loaded config" {% if nav == "config" %}aria-current="page"{% endif %}><span class="config-label">Config</span>{{ active_config() }}</a>
+        <a class="demo-link{% if nav == 'demo' %} active{% endif %}" href="/demo" {% if nav == "demo" %}aria-current="page"{% endif %}>Samples</a>
+      </div>
+    </header>
+    <main class="page">
+      {% if db_error %}
+      <div class="flash err" role="alert"><p>{{ db_error }}</p></div>
+      {% else %}
+      {% if message %}
+      <div class="flash" role="status"><p>{{ message }}</p><button class="btn ghost icon" type="button" data-dismiss aria-label="Dismiss">✕</button></div>
+      {% endif %}
+      {% if error %}
+      <div class="flash err" role="alert"><p>{{ error }}</p><button class="btn ghost icon" type="button" data-dismiss aria-label="Dismiss">✕</button></div>
+      {% endif %}
+      {% block body %}{% endblock %}
+      {% endif %}
+    </main>
+    <dialog id="payload-dialog" aria-labelledby="payload-title">
+      <div class="dialog-head">
+        <h2 id="payload-title" class="mono" data-dialog-title></h2>
+        <button class="btn ghost icon" type="button" data-dialog-close aria-label="Close">✕</button>
+      </div>
+      <div class="dialog-body" data-dialog-body></div>
+    </dialog>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

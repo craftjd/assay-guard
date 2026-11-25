@@ -26,3 +26,19 @@ INNER JOIN (
 ) latest ON latest.run_id = pr.run_id
 INNER JOIN processing_row prow ON prow.run_id = pr.run_id
 GROUP BY pr.import_id, pr.run_id, pr.config_version, prow.outcome;
+
+CREATE OR REPLACE VIEW v_archive_vs_main AS
+SELECT
+  a.archive_id,
+  a.row_key,
+  a.from_import_id,
+  a.payload_json AS archived_payload,
+  a.archived_at,
+  a.reason,
+  a.run_id,
+  a.replaced_by_import_id,
+  a.payload_sha,
+  m.import_id AS main_import_id,
+  m.payload_json AS main_payload
+FROM archive_assay a
+LEFT JOIN main_assay m ON m.row_key = a.row_key;

@@ -1,5 +1,7 @@
 # Mining import demo — plan & brainstorm export
 
+**Historical product plan (not for visitors).** Public summary: [README](../../README.md). The app is branded **Assay Guard**.
+
 Open this file in Cursor (Windows or cloud). It is the durable export of the brainstorm and execution plan.
 
 Live canvas (same content family): open from the agent chat canvas **Mining import demo — execution plan**.

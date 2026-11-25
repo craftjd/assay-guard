@@ -1,0 +1,18 @@
+{
+  "name": "Assay Guard",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "web",
+  "workspaceFolder": "/app",
+  "forwardPorts": [8765],
+  "postCreateCommand": "pip install -r requirements.txt && python -c \"from app.services.schema import ensure_model; ensure_model()\"",
+  "customizations": {
+    "vscode": {
+      "portsAttributes": {
+        "8765": {
+          "label": "Assay Guard",
+          "onAutoForward": "openBrowser"
+        }
+      }
+    }
+  }
+}

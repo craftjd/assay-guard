@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tag, outcome_tag, pager, value_cells, written %}
+{% block title %}Run {{ run.run_no if run else "" }} · {{ item.file_name if item else "Process" }} · {{ product_name }}{% endblock %}
+{% block body %}
+{% if not run or not item %}
+<p class="empty">Run not found. <a href="/process">Back to Process</a>.</p>
+{% else %}
+{% set base = "/process/import/" ~ item.import_id %}
+{% set here = base ~ "/runs/" ~ run.run_no %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow"><a href="/process">Process</a> / <a href="{{ base }}">{{ item.plan.name.label }}</a> / Run {{ run.run_no }}</span>
+    <h1>Run {{ run.run_no }} of {{ run.run_count }}</h1>
+    <div class="page-meta">
+      <span>{{ item.file_name }}</span>
+      <span class="mono">{{ run.config_version }}</span>
+      <span class="mono dim">{{ run.when }}</span>
+    </div>
+  </div>
+  <div class="btn-row">
+    {% if run.run_no > 1 %}<a class="btn ghost" href="{{ base }}/runs/{{ run.run_no - 1 }}">← Run {{ run.run_no - 1 }}</a>{% endif %}
+    {% if not run.is_latest %}<a class="btn ghost" href="{{ base }}/runs/{{ run.run_no + 1 }}">Run {{ run.run_no + 1 }} →</a>{% endif %}
+  </div>
+</div>
+
+<p class="notice">This is a record of what run {{ run.run_no }} found. To see where the rows stand in main now, <a href="{{ base }}">open the import</a>.</p>
+
+<div class="table-wrap">
+  <table class="table facts">
+    <tbody>
+      <tr><th scope="row">Found</th><td class="fill">{{ run.found or "—" }}</td></tr>
+      <tr><th scope="row">{% if run.previous_run_no %}Changed from run {{ run.previous_run_no }}{% else %}Changed{% endif %}</th><td class="fill">{{ run.change_note }}</td></tr>
+      <tr><th scope="row">Saved to main</th><td class="fill lines">{{ written(run.written, "Nothing") }}</td></tr>
+    </tbody>
+  </table>
+</div>
+
+{% set saved = [] %}
+{% for part in run.written %}{% for item in part["items"] %}{% set _ = saved.append({"label": part.label, "row_key": item.row_key, "detail": item.detail}) %}{% endfor %}{% endfor %}
+{% if saved and saved|selectattr("detail")|list %}
+<section class="section">
+  <div class="toolbar"><h2>Saved to main from this run</h2></div>
+  <div class="table-wrap">
+    <table class="table scroll">
+      <thead><tr><th class="sample">Sample</th><th>Change</th><th class="fill">Detail</th></tr></thead>
+      <tbody>
+        {% for row in saved[:100] %}
+        <tr><td class="sample key">{{ row.row_key }}</td><td>{{ row.label }}</td><td class="fill dim">{{ row.detail or "—" }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if run.changes %}
+<section class="section">
+  <div class="toolbar"><h2>What changed from run {{ run.previous_run_no }}</h2></div>
+  <p class="lede">
+    {% if run.previous_config != run.config_version %}Run {{ run.previous_run_no }} used {{ run.previous_config }}; this run used {{ run.config_version }}.{% else %}Both runs used {{ run.config_version }}.{% endif %}
+    {% if run.settled %} {{ run.settled }} row{{ "s" if run.settled != 1 else "" }} went from New to Same only because they were saved, and {{ "are" if run.settled != 1 else "is" }} not listed.{% endif %}
+  </p>
+  <div class="table-wrap">
+    <table class="table scroll">
+      <thead><tr><th class="sample">Sample</th><th>Run {{ run.previous_run_no }}</th><th>Run {{ run.run_no }}</th><th class="fill">Why</th></tr></thead>
+      <tbody>
+        {% for row in run.changes[:40] %}
+        <tr>
+          <td class="sample key">{{ row.row_key or "—" }}</td>
+          <td>{{ outcome_tag(row.previous) if row.previous else "—" }}</td>
+          <td>{{ outcome_tag(row.latest) if row.latest else "—" }}</td>
+          <td class="fill dim" title="{{ row.detail }}">{{ row.detail }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if run.changes|length > 40 %}<div class="section-actions"><span class="muted">First 40 of {{ "{:,}".format(run.changes|length) }}.</span></div>{% endif %}
+</section>
+{% endif %}
+
+{% set rows = run.rows %}
+{% set find = "q=" ~ (run.query|urlencode) ~ "&" if run.query else "" %}
+<section class="section" id="rows">
+  <div class="toolbar">
+    <h2>Rows as run {{ run.run_no }} saw them</h2>
+    <form class="inline search-form" method="get" action="{{ here }}#rows" role="search">
+      {% if run.outcome %}<input type="hidden" name="outcome" value="{{ run.outcome }}" />{% endif %}
+      <span class="hint"><kbd>/</kbd> search</span>
+      <input class="search" type="search" name="q" value="{{ run.query }}" placeholder="Sample, reason, file row…" data-focus-search aria-label="Search rows" />
+    </form>
+  </div>
+  <div class="filters">
+    <a href="{{ here }}?{{ find }}#rows" {% if not run.outcome %}aria-current="true"{% endif %}>All <span class="num">{{ "{:,}".format(run.counts.values()|sum) }}</span></a>
+    {% for key, label in [("good", "New"), ("already_same", "Same as main"), ("changed", "Different"), ("invalid", "Fails config")] if run.counts[key] %}
+    <a href="{{ here }}?outcome={{ key }}&{{ find }}#rows" {% if run.outcome == key %}aria-current="true"{% endif %}>{{ label }} <span class="num">{{ "{:,}".format(run.counts[key]) }}</span></a>
+    {% endfor %}
+  </div>
+  {% if rows.rows %}
+  <div class="table-wrap">
+    <table class="table rows-table scroll">
+      <thead>
+        <tr>
+          <th class="num tight">Line</th>
+          <th class="sample">Sample</th>
+          {% for column in run.columns %}<th class="{% if column.num %}num {% endif %}val">{{ column.label }}</th>{% endfor %}
+          <th>Result</th>
+          <th class="fill">Why</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows.rows %}
+        <tr>
+          <td class="num dim">{{ row.source_row_no }}</td>
+          <td class="sample key">{{ row.row_key or "—" }}</td>
+          {{ value_cells(run.columns, row["values"], row.fields) }}
+          <td>{{ outcome_tag(row.outcome) }}</td>
+          <td class="fill {% if row.outcome == 'invalid' %}text-err{% else %}dim{% endif %}">{{ row.reason or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pager(rows.page, rows.pages, here ~ "?" ~ ("outcome=" ~ run.outcome ~ "&" if run.outcome else "") ~ find ~ "page=", "#rows") }}
+  {% else %}
+  <p class="empty">No rows match. <a href="{{ here }}#rows">Show all rows</a>.</p>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

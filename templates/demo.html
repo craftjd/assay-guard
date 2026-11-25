@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Samples · {{ product_name }}{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Walkthrough</span>
+    <h1>Sample loads</h1>
+  </div>
+  <form class="inline" method="post" action="/demo/clear">
+    <button class="btn danger" type="submit" data-arm="Click again to clear" title="Empty imports, main, archive, and runs. The loaded config stays as it is.">Start fresh</button>
+  </form>
+</div>
+<section class="tiles" aria-label="Sample loads">
+  {% for demo in demos %}
+  <form method="post" action="/demo">
+    <input type="hidden" name="demo" value="{{ demo.id }}" />
+    <button class="tile" type="submit">
+      <span class="tile-index">{{ "%02d"|format(loop.index) }}<span class="sep"> / </span>{{ demo.fixture }}</span>
+      <span class="tile-title">{{ demo.title }}</span>
+      <span class="tile-text">{{ demo.detail }}</span>
+    </button>
+  </form>
+  {% endfor %}
+</section>
+{% endblock %}

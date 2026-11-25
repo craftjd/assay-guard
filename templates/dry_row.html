@@ -1,0 +1,12 @@
+<tr class="expand">
+  <td colspan="8">
+    <div class="expand-body">
+      {% if error %}
+      <div class="flash err"><p>{{ error }}</p></div>
+      {% elif plan %}
+      {% set back = "/process" %}
+      {% include "dry_body.html" %}
+      {% endif %}
+    </div>
+  </td>
+</tr>
